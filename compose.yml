@@ -1,0 +1,11 @@
+services:
+    db:
+        image: mysql
+        restart: always
+        ports:
+            - "127.0.0.1:3306:3306"
+        env_file:
+            - path: .env
+              required: true
+        environment:
+            MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
