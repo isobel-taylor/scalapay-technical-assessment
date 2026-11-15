@@ -1,4 +1,5 @@
-import { DataTypes, Sequelize } from "sequelize";
+import { DataTypes, Model, Sequelize } from "sequelize";
+import { ProductAttributes, ProductCreationAttributes } from "./types.js";
 
 export const sequelize = new Sequelize({
     dialect: "mysql",
@@ -9,32 +10,41 @@ export const sequelize = new Sequelize({
     password: process.env.MYSQL_ROOT_PASSWORD,
 });
 
-const Product = sequelize.define(
+export const Product = sequelize.define<
+    Model<ProductAttributes, ProductCreationAttributes>
+>(
     "Product",
     {
         id: {
             type: DataTypes.BIGINT,
             primaryKey: true,
             autoIncrement: true,
-            allowNull: false,
         },
         productToken: {
-            type: DataTypes.UUIDV4,
+            type: DataTypes.UUID,
             unique: true,
             defaultValue: DataTypes.UUIDV4,
-            allowNull: false,
         },
         name: {
             type: DataTypes.STRING,
             allowNull: false,
+            validate: {
+                notEmpty: true,
+            },
         },
         price: {
-            type: DataTypes.DECIMAL,
+            type: DataTypes.DECIMAL(10, 2),
             allowNull: false,
+            validate: {
+                min: 0,
+            },
         },
         stock: {
             type: DataTypes.BIGINT,
-            allowNull: false,
+            defaultValue: 0,
+            validate: {
+                min: 0,
+            },
         },
     },
     {

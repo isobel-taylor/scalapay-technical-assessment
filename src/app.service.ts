@@ -1,26 +1,40 @@
 import { Injectable } from "@nestjs/common";
 import { CreateProductDto } from "./dto/create-product-dto.js";
 import { UpdateProductDto } from "./dto/update-product-dto.js";
+import { Product } from "./db/index.js";
+import { ProductType } from "./db/types.js";
 
 @Injectable()
 export class AppService {
-    findAll(): string {
-        return "I will find all products!";
+    async findAll(): Promise<ProductType[]> {
+        return await Product.findAll();
     }
 
-    create(createProductBody: CreateProductDto): string {
-        return `I will create a product! It will have this configuration: ${JSON.stringify(createProductBody)}`;
+    async create(createProductBody: CreateProductDto): Promise<number> {
+        const newProduct = await Product.create(createProductBody);
+        return newProduct.dataValues.id;
     }
 
-    findOne(id: number): string {
-        return `I will find the product ${id}!`;
+    async findOne(id: number): Promise<ProductType | null> {
+        return await Product.findByPk(id);
     }
 
-    update(id: number, updateProductBody: UpdateProductDto): string {
-        return `I will update the product ${id}! It will have this configuration: ${JSON.stringify(updateProductBody)}`;
+    async update(
+        id: number,
+        updateProductBody: UpdateProductDto,
+    ): Promise<void> {
+        await Product.update(updateProductBody, {
+            where: {
+                id,
+            },
+        });
     }
 
-    delete(id: number): string {
-        return `I will delete the product ${id}!`;
+    async delete(id: number): Promise<void> {
+        await Product.destroy({
+            where: {
+                id,
+            },
+        });
     }
 }

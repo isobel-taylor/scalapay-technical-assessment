@@ -1,37 +1,52 @@
-import { Body, Controller, Delete, Get, Param, Post } from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    HttpException,
+    Param,
+    Post,
+} from "@nestjs/common";
 import { AppService } from "./app.service.js";
 import { CreateProductDto } from "./dto/create-product-dto.js";
 import { UpdateProductDto } from "./dto/update-product-dto.js";
+import { ProductType } from "./db/types.js";
 
 @Controller("products")
 export class AppController {
     constructor(private readonly appService: AppService) {}
 
     @Get()
-    findAll(): string {
-        return this.appService.findAll();
+    async findAll(): Promise<ProductType[]> {
+        return await this.appService.findAll();
     }
 
     @Post()
-    create(@Body() createProductBody: CreateProductDto): string {
-        return this.appService.create(createProductBody);
+    async create(@Body() createProductBody: CreateProductDto): Promise<number> {
+        return await this.appService.create(createProductBody);
     }
 
     @Get(":id")
-    findOne(@Param("id") id: number): string {
-        return this.appService.findOne(id);
+    async findOne(@Param("id") id: number): Promise<ProductType> {
+        const product = await this.appService.findOne(id);
+
+        if (product === null) {
+            throw new HttpException("Product not found", 404);
+        }
+
+        return product;
     }
 
     @Post(":id")
-    update(
+    async update(
         @Param("id") id: number,
         @Body() updateProductBody: UpdateProductDto,
-    ): string {
-        return this.appService.update(id, updateProductBody);
+    ): Promise<void> {
+        await this.appService.update(id, updateProductBody);
     }
 
     @Delete(":id")
-    delete(@Param("id") id: number): string {
-        return this.appService.delete(id);
+    async delete(@Param("id") id: number): Promise<void> {
+        await this.appService.delete(id);
     }
 }
