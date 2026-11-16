@@ -376,7 +376,7 @@ describe("Products API (e2e)", () => {
         );
     });
 
-    describe("POST /products/:id", () => {
+    describe("PATCH /products/:id", () => {
         it("updates the stock of a product", async () => {
             const id = (
                 await createProduct({
@@ -386,35 +386,45 @@ describe("Products API (e2e)", () => {
                 })
             ).id;
 
-            await api()
-                .post(`/products/${id}`)
+            const updated = await api()
+                .patch(`/products/${id}`)
                 .send({ stock: 7 })
-                .expect(201)
-                .expect("Content-Type", /application\/json/)
-                .expect({ id });
+                .expect(200)
+                .expect("Content-Type", /application\/json/);
 
-            const response = await api().get(`/products/${id}`).expect(200);
-            expect(response.body).toMatchObject({
+            expect(updated.body).toEqual({
+                id,
+                productToken: expect.any(String),
                 name: "Widget",
                 price: "9.99",
                 stock: 7,
+                createdAt: expect.any(String),
+                updatedAt: expect.any(String),
             });
+
+            // The response is the product as stored, not just an echo.
+            const stored = await api().get(`/products/${id}`).expect(200);
+            expect(updated.body).toEqual(stored.body);
         });
 
         it("updates several fields at once", async () => {
             const id = (await createProduct()).id;
 
-            await api()
-                .post(`/products/${id}`)
+            const updated = await api()
+                .patch(`/products/${id}`)
                 .send({ name: "Renamed", price: 20.5, stock: 0 })
-                .expect(201);
+                .expect(200);
 
-            const response = await api().get(`/products/${id}`).expect(200);
-            expect(response.body).toMatchObject({
+            // Price is returned as the stored decimal string, not the number
+            // that was sent.
+            expect(updated.body).toMatchObject({
+                id,
                 name: "Renamed",
                 price: "20.50",
                 stock: 0,
             });
+            const stored = await api().get(`/products/${id}`).expect(200);
+            expect(updated.body).toEqual(stored.body);
         });
 
         it("only changes the targeted product", async () => {
@@ -430,9 +440,9 @@ describe("Products API (e2e)", () => {
             });
 
             await api()
-                .post(`/products/${first.id}`)
+                .patch(`/products/${first.id}`)
                 .send({ stock: 9 })
-                .expect(201);
+                .expect(200);
 
             const response = await api()
                 .get(`/products/${second.id}`)
@@ -440,28 +450,34 @@ describe("Products API (e2e)", () => {
             expect(response.body).toMatchObject({ stock: 2 });
         });
 
-        it("succeeds when the update does not change anything", async () => {
-            const response = await createProduct({
+        it("returns the unchanged product when the update does not change anything", async () => {
+            const { id } = await createProduct({
                 name: "Widget",
                 price: 9.99,
                 stock: 3,
             });
+            // Sequelize sets updatedAt on every update, so it may tick over
+            // even when nothing else changes. Compare everything else.
+            const { updatedAt: _, ...before } = (
+                await api().get(`/products/${id}`).expect(200)
+            ).body as Record<string, unknown>;
 
-            await api()
-                .post(`/products/${response.id}`)
-                .send({ stock: 3 })
-                .expect(201)
-                .expect({ id: response.id });
-            await api()
-                .post(`/products/${response.id}`)
-                .send({})
-                .expect(201)
-                .expect({ id: response.id });
+            for (const body of [{ stock: 3 }, {}]) {
+                const response = await api()
+                    .patch(`/products/${id}`)
+                    .send(body)
+                    .expect(200);
+
+                expect(response.body).toEqual({
+                    ...before,
+                    updatedAt: expect.any(String),
+                });
+            }
         });
 
         it("returns 404 for a product that does not exist", async () => {
             await api()
-                .post("/products/999")
+                .patch("/products/999")
                 .send({ stock: 1 })
                 .expect(404)
                 .expect(notFound);
@@ -469,7 +485,7 @@ describe("Products API (e2e)", () => {
 
         it("returns 404 for a no-op update of a product that does not exist", async () => {
             await api()
-                .post("/products/999")
+                .patch("/products/999")
                 .send({})
                 .expect(404)
                 .expect(notFound);
@@ -485,7 +501,7 @@ describe("Products API (e2e)", () => {
             ).id;
 
             const response = await api()
-                .post(`/products/${id}`)
+                .patch(`/products/${id}`)
                 .send({ stock: -1, productToken: "abc" })
                 .expect(400);
 
@@ -499,11 +515,24 @@ describe("Products API (e2e)", () => {
 
         it("returns 400 for an invalid id", async () => {
             const response = await api()
-                .post("/products/abc")
+                .patch("/products/abc")
                 .send({ stock: 1 })
                 .expect(400);
 
             expect(Object.keys(response.body.message)).toEqual(["id"]);
+        });
+
+        it("no longer accepts updates via POST", async () => {
+            const { id } = await createProduct({
+                name: "Widget",
+                price: 1,
+                stock: 3,
+            });
+
+            await api().post(`/products/${id}`).send({ stock: 7 }).expect(404);
+
+            const stored = await api().get(`/products/${id}`).expect(200);
+            expect(stored.body).toMatchObject({ stock: 3 });
         });
     });
 
@@ -517,7 +546,7 @@ describe("Products API (e2e)", () => {
 
         describe.each([
             ["POST /products", undefined],
-            ["POST /products/:id", { name: "Widget", price: 1 }],
+            ["PATCH /products/:id", { name: "Widget", price: 1 }],
         ])("%s", (_, existing) => {
             /** Sends the body to create, or to update a fresh product. */
             const send = async (body: object) => {
@@ -532,7 +561,7 @@ describe("Products API (e2e)", () => {
                         });
                 }
                 const { id } = await createProduct(existing);
-                return api().post(`/products/${id}`).send(body);
+                return api().patch(`/products/${id}`).send(body);
             };
 
             it("stores a 255 character name", async () => {
@@ -659,7 +688,7 @@ describe("Products API (e2e)", () => {
             const { id } = await createProduct({ name: "Widget", price: 1 });
 
             await api()
-                .post(`/products/${id}`)
+                .patch(`/products/${id}`)
                 .send({ name: tooLongName, price: 9.999 })
                 .expect(400);
 

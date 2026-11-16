@@ -116,13 +116,13 @@ describe("ProductsController", () => {
     });
 
     describe("update", () => {
-        it("updates the product with the given id and returns the id", async () => {
-            productsService.update.mockResolvedValue(undefined);
+        it("updates the product with the given id and returns it", async () => {
+            productsService.update.mockResolvedValue(product);
             const body = { stock: 7 };
 
             await expect(
                 productsController.update({ id: 1 }, body),
-            ).resolves.toStrictEqual({ id: 1 });
+            ).resolves.toBe(product);
             expect(productsService.update).toHaveBeenCalledWith(1, body);
         });
 

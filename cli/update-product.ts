@@ -1,6 +1,7 @@
 import "dotenv/config";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
+import type { ProductAttributes } from "../src/products/product.model.js";
 
 const PORT = process.env.PORT ?? 3000;
 
@@ -13,9 +14,9 @@ interface UpdateProductBody {
 const updateProduct = async (
     id: number,
     body: UpdateProductBody,
-): Promise<{ id: number }> => {
+): Promise<ProductAttributes> => {
     const response = await fetch(`http://localhost:${PORT}/products/${id}`, {
-        method: "POST",
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(body),
     });

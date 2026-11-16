@@ -69,29 +69,28 @@ export class ProductsService {
     async update(
         id: number,
         updateProductBody: UpdateProductBodyDto,
-    ): Promise<void> {
+    ): Promise<Product> {
         const { price, ...rest } = updateProductBody;
         const values =
             price === undefined
                 ? rest
                 : { ...rest, price: toDecimalString(price) };
 
-        const affectedRows = (
-            await this.products.update(values, {
-                where: {
-                    id,
-                },
-            })
-        )[0];
+        await this.products.update(values, {
+            where: {
+                id,
+            },
+        });
 
-        // For an update, if the number of rows affected is 0, that may mean
-        // that the row exists, but didn't change. Do a lookup after the fact
-        // to differentiate, so most updates will involve only one query.
-        if (affectedRows === 0) {
-            if ((await this.products.findByPk(id)) === null) {
-                throw new HttpException("Product not found", 404);
-            }
+        // Read the row back to return it as stored. This also covers the
+        // not-found case: an update that matches no rows isn't an error in
+        // itself (it may just have changed nothing), but a missing row is.
+        const product = await this.products.findByPk(id);
+        if (product === null) {
+            throw new HttpException("Product not found", 404);
         }
+
+        return product;
     }
 
     async delete(id: number): Promise<void> {

@@ -4,6 +4,7 @@ import {
     Delete,
     Get,
     Param,
+    Patch,
     Post,
     Query,
 } from "@nestjs/common";
@@ -46,14 +47,12 @@ export class ProductsController {
         return await this.productsService.findOne(param.id);
     }
 
-    @Post(":id")
+    @Patch(":id")
     async update(
         @Param() param: UpdateProductParamDto,
         @Body() updateProductBody: UpdateProductBodyDto,
-    ): Promise<{ id: number }> {
-        await this.productsService.update(param.id, updateProductBody);
-
-        return { id: param.id };
+    ): Promise<Product> {
+        return await this.productsService.update(param.id, updateProductBody);
     }
 
     @Delete(":id")

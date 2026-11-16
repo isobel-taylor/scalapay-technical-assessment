@@ -172,19 +172,34 @@ describe("ProductsService", () => {
     });
 
     describe("update", () => {
-        it("updates the product by id without an extra lookup when a row changed", async () => {
+        const updated = { id: 1, name: "Widget", price: "9.99", stock: 7 };
+
+        it("updates the product by id and returns it as stored", async () => {
             products.update.mockResolvedValue([1]);
+            products.findByPk.mockResolvedValue(updated);
             const body = { stock: 7 };
 
-            await expect(service.update(1, body)).resolves.toBeUndefined();
+            await expect(service.update(1, body)).resolves.toBe(updated);
             expect(products.update).toHaveBeenCalledWith(body, {
                 where: { id: 1 },
             });
-            expect(products.findByPk).not.toHaveBeenCalled();
+            expect(products.findByPk).toHaveBeenCalledWith(1);
+        });
+
+        it("reads the product back only after updating it", async () => {
+            products.update.mockResolvedValue([1]);
+            products.findByPk.mockResolvedValue(updated);
+
+            await service.update(1, { stock: 7 });
+
+            expect(products.update.mock.invocationCallOrder[0]).toBeLessThan(
+                products.findByPk.mock.invocationCallOrder[0],
+            );
         });
 
         it("converts an updated price to a decimal string", async () => {
             products.update.mockResolvedValue([1]);
+            products.findByPk.mockResolvedValue(updated);
 
             await service.update(1, { name: "Renamed", price: 20.5 });
 
@@ -196,6 +211,7 @@ describe("ProductsService", () => {
 
         it("does not set price when it is not being updated", async () => {
             products.update.mockResolvedValue([1]);
+            products.findByPk.mockResolvedValue(updated);
 
             await service.update(1, { stock: 7 });
 
@@ -204,17 +220,16 @@ describe("ProductsService", () => {
             );
         });
 
-        it("succeeds when no row changed but the product exists", async () => {
+        it("returns the product when no row changed but the product exists", async () => {
             products.update.mockResolvedValue([0]);
-            products.findByPk.mockResolvedValue({ id: 1 });
+            products.findByPk.mockResolvedValue(updated);
 
-            await expect(
-                service.update(1, { stock: 7 }),
-            ).resolves.toBeUndefined();
-            expect(products.findByPk).toHaveBeenCalledWith(1);
+            await expect(service.update(1, { stock: 7 })).resolves.toBe(
+                updated,
+            );
         });
 
-        it("throws a 404 when no row changed and the product does not exist", async () => {
+        it("throws a 404 when the product does not exist", async () => {
             products.update.mockResolvedValue([0]);
             products.findByPk.mockResolvedValue(null);
 

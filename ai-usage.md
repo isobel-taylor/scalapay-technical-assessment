@@ -40,3 +40,6 @@
 
 - Suggested the findAndCountAll method for the pagination endpoint, and updated
   tests and code samples to reflect the change.
+
+- Suggested using PATCH for the update path and returning the product itself.
+  Updated tests to accomodate the change.
