@@ -3,7 +3,6 @@ import {
     Controller,
     Delete,
     Get,
-    HttpException,
     Param,
     Post,
     Query,
@@ -38,13 +37,7 @@ export class AppController {
 
     @Get(":id")
     async findOne(@Param() param: FindOneProductDto): Promise<ProductType> {
-        const product = await this.appService.findOne(param.id);
-
-        if (product === null) {
-            throw new HttpException("Product not found", 404);
-        }
-
-        return product;
+        return await this.appService.findOne(param.id);
     }
 
     @Post(":id")

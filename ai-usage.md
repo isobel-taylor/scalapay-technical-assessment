@@ -6,3 +6,8 @@
 - Working out an issue with initial Sequelize setup. Specifically, the container
   hadn't picked up the database I set specified, and needed restarting, and I'd
   used UUIDv4 as a type rather than a default value.
+
+- Workshop ways to approach error-handling, particularly with the case that an
+  update might match a row, but not change it. It suggested several approaches,
+  including a driver-level configuration change, but I chose to keep it explicit
+  in code and do a check after the fact when it's detected that no rows changed.

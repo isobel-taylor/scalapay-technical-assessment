@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { HttpException, Injectable } from "@nestjs/common";
 import { CreateProductDto } from "./dto/create-product-dto.js";
 import { UpdateProductBodyDto } from "./dto/update-product-dto.js";
 import { Product } from "./db/index.js";
@@ -19,26 +19,47 @@ export class AppService {
         return newProduct.dataValues.id;
     }
 
-    async findOne(id: number): Promise<ProductType | null> {
-        return await Product.findByPk(id);
+    async findOne(id: number): Promise<ProductType> {
+        const product = await Product.findByPk(id);
+
+        if (product === null) {
+            throw new HttpException("Product not found", 404);
+        }
+
+        return product;
     }
 
     async update(
         id: number,
         updateProductBody: UpdateProductBodyDto,
     ): Promise<void> {
-        await Product.update(updateProductBody, {
-            where: {
-                id,
-            },
-        });
+        const affectedRows = (
+            await Product.update(updateProductBody, {
+                where: {
+                    id,
+                },
+            })
+        )[0];
+
+        // For an update, if the number of rows affected is 0, that may mean
+        // that the row exists, but didn't change. Do a lookup after the fact
+        // to differentiate, so most updates will involve only one query.
+        if (affectedRows === 0) {
+            if ((await Product.findByPk(id)) === null) {
+                throw new HttpException("Product not found", 404);
+            }
+        }
     }
 
     async delete(id: number): Promise<void> {
-        await Product.destroy({
+        const affectedRows = await Product.destroy({
             where: {
                 id,
             },
         });
+
+        if (affectedRows === 0) {
+            throw new HttpException("Product not found", 404);
+        }
     }
 }
