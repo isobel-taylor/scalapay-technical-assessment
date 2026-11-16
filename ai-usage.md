@@ -26,3 +26,6 @@
   it should fail at that layer, if a different implementation would handle it
   better, but I went with its suggestion of a new validation function to count
   code points, which it implemented.
+
+- I wrote the first usage script, list-products, and tasked AI with writing the
+  remaining sample scripts.
