@@ -6,16 +6,16 @@ import {
     IsOptional,
     IsString,
     Max,
-    MaxLength,
     Min,
 } from "class-validator";
 import { PRICE_MAX, PRICE_SCALE, STOCK_MAX } from "../db/types.js";
+import { MaxCodePoints } from "./max-code-points.js";
 
 export class UpdateProductBodyDto {
     @IsOptional()
     @IsString()
     @IsNotEmpty()
-    @MaxLength(255)
+    @MaxCodePoints(255)
     name?: string;
 
     @IsOptional()

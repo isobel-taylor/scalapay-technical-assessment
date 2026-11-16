@@ -166,6 +166,43 @@ describe("DTO validation", () => {
             });
         });
 
+        // MySQL counts code points; "❤️" is 2 (U+2764 U+FE0F), "😀" is 1.
+        it.each([
+            ["255 single code point emoji", "😀".repeat(255)],
+            [
+                "127 emoji with variation selectors (254 code points)",
+                "❤️".repeat(127),
+            ],
+            [
+                "an emoji with a variation selector at the limit",
+                "a".repeat(253) + "❤️",
+            ],
+        ])("accepts a name of %s", async (__, name) => {
+            await expect(body({ name })).resolves.toEqual({ ...base, name });
+        });
+
+        it.each([
+            ["256 single code point emoji", "😀".repeat(256)],
+            [
+                "128 emoji with variation selectors (256 code points)",
+                "❤️".repeat(128),
+            ],
+            [
+                "255 emoji with variation selectors (510 code points)",
+                "❤️".repeat(255),
+            ],
+            [
+                "an emoji with a variation selector past the limit",
+                "a".repeat(254) + "❤️",
+            ],
+        ])("rejects a name of %s", async (__, name) => {
+            const errors = await validationErrors(body({ name }));
+
+            expect(errors).toEqual({
+                name: ["name must be shorter than or equal to 255 characters"],
+            });
+        });
+
         it.each([100_000_000, 100_000_000.01, 1e12])(
             "rejects price %d above the maximum",
             async (price) => {

@@ -427,8 +427,11 @@ describe("Products API (e2e)", () => {
                 expect(stored.body.name).toBe(maxName);
             });
 
-            it("stores a 255 character multi-byte name", async () => {
-                const name = "€".repeat(255);
+            it.each([
+                ["3-byte characters", "€".repeat(255)],
+                ["4-byte emoji", "😀".repeat(255)],
+                ["emoji with variation selectors", "❤️".repeat(127) + "a"],
+            ])("stores a 255 code point name of %s", async (__, name) => {
                 const response = await send({ name });
                 expect(response.status).toBeLessThan(300);
 
@@ -480,6 +483,16 @@ describe("Products API (e2e)", () => {
                     "price must be a number conforming to the specified constraints",
                 ],
                 [
+                    "255 emoji with variation selectors (510 code points)",
+                    { name: "❤️".repeat(255) },
+                    "name must be shorter than or equal to 255 characters",
+                ],
+                [
+                    "128 emoji with variation selectors (256 code points)",
+                    { name: "❤️".repeat(128) },
+                    "name must be shorter than or equal to 255 characters",
+                ],
+                [
                     "a stock above the maximum",
                     { stock: Number.MAX_SAFE_INTEGER + 1 },
                     "stock must not be greater than 9007199254740991",
@@ -502,6 +515,15 @@ describe("Products API (e2e)", () => {
             await api()
                 .post("/products")
                 .send({ name: tooLongName, price: 100_000_000 })
+                .expect(400);
+
+            expect(await Product.count()).toBe(0);
+        });
+
+        it("does not store a name that only fits when variation selectors are ignored", async () => {
+            await api()
+                .post("/products")
+                .send({ name: "❤️".repeat(255), price: 1 })
                 .expect(400);
 
             expect(await Product.count()).toBe(0);
