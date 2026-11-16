@@ -2,7 +2,13 @@ import { HttpException, Injectable } from "@nestjs/common";
 import { CreateProductDto } from "./dto/create-product-dto.js";
 import { UpdateProductBodyDto } from "./dto/update-product-dto.js";
 import { Product } from "./db/index.js";
-import { ProductType } from "./db/types.js";
+import { PRICE_SCALE, ProductType } from "./db/types.js";
+
+/**
+ * Prices arrive as numbers but are stored in a DECIMAL column, which Sequelize
+ * reads and writes as strings. Converting here keeps the exact value.
+ */
+const toDecimalString = (price: number): string => price.toFixed(PRICE_SCALE);
 
 @Injectable()
 export class AppService {
@@ -15,7 +21,11 @@ export class AppService {
     }
 
     async create(createProductBody: CreateProductDto): Promise<number> {
-        const newProduct = await Product.create(createProductBody);
+        const { price, ...rest } = createProductBody;
+        const newProduct = await Product.create({
+            ...rest,
+            price: toDecimalString(price),
+        });
         return newProduct.dataValues.id;
     }
 
@@ -33,8 +43,14 @@ export class AppService {
         id: number,
         updateProductBody: UpdateProductBodyDto,
     ): Promise<void> {
+        const { price, ...rest } = updateProductBody;
+        const values =
+            price === undefined
+                ? rest
+                : { ...rest, price: toDecimalString(price) };
+
         const affectedRows = (
-            await Product.update(updateProductBody, {
+            await Product.update(values, {
                 where: {
                     id,
                 },

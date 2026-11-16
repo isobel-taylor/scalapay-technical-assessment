@@ -31,8 +31,12 @@ export class AppController {
     }
 
     @Post()
-    async create(@Body() createProductBody: CreateProductDto): Promise<number> {
-        return await this.appService.create(createProductBody);
+    async create(
+        @Body() createProductBody: CreateProductDto,
+    ): Promise<{ id: number }> {
+        return {
+            id: await this.appService.create(createProductBody),
+        };
     }
 
     @Get(":id")
@@ -44,12 +48,16 @@ export class AppController {
     async update(
         @Param() param: UpdateProductParamDto,
         @Body() updateProductBody: UpdateProductBodyDto,
-    ): Promise<void> {
+    ): Promise<{ id: number }> {
         await this.appService.update(param.id, updateProductBody);
+
+        return { id: param.id };
     }
 
     @Delete(":id")
-    async delete(@Param() param: DeleteProductDto): Promise<void> {
+    async delete(@Param() param: DeleteProductDto): Promise<{ id: number }> {
         await this.appService.delete(param.id);
+
+        return { id: param.id };
     }
 }

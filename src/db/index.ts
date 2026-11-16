@@ -1,5 +1,10 @@
 import { DataTypes, Model, Sequelize } from "sequelize";
-import { ProductAttributes, ProductCreationAttributes } from "./types.js";
+import {
+    PRICE_PRECISION,
+    PRICE_SCALE,
+    ProductAttributes,
+    ProductCreationAttributes,
+} from "./types.js";
 
 export const sequelize = new Sequelize({
     dialect: "mysql",
@@ -33,7 +38,7 @@ export const Product = sequelize.define<
             },
         },
         price: {
-            type: DataTypes.DECIMAL(10, 2),
+            type: DataTypes.DECIMAL(PRICE_PRECISION, PRICE_SCALE),
             allowNull: false,
             validate: {
                 min: 0,
