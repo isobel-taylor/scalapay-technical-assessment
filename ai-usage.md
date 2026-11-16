@@ -32,3 +32,6 @@
 
 - AI noted a spec gap: the productToken is to be supplied, but my implementation
   had it generated as a UUIDv4 on product creation.
+
+- Iterative refactor to create a product module and register Sequelize through
+  dependency injection.

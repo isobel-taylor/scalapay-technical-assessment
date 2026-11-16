@@ -12,6 +12,8 @@ async function bootstrap() {
         },
     });
     app.useGlobalPipes(createValidationPipe());
+    // Run shutdown hooks (closing the database connection) on SIGTERM/SIGINT.
+    app.enableShutdownHooks();
 
     await app.listen(process.env.PORT ?? 3000);
 }

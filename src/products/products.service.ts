@@ -1,9 +1,10 @@
-import { HttpException, Injectable } from "@nestjs/common";
+import { HttpException, Inject, Injectable } from "@nestjs/common";
 import { UniqueConstraintError } from "sequelize";
-import { CreateProductDto } from "./dto/create-product-dto.js";
-import { UpdateProductBodyDto } from "./dto/update-product-dto.js";
-import { Product } from "./db/index.js";
-import { PRICE_SCALE, ProductType } from "./db/types.js";
+import { CreateProductDto } from "./dto/create-product.dto.js";
+import { UpdateProductBodyDto } from "./dto/update-product.dto.js";
+import { PRICE_SCALE } from "./product.model.js";
+import type { Product, ProductRepository } from "./product.model.js";
+import { PRODUCTS_REPOSITORY } from "./products.constants.js";
 
 /**
  * Prices arrive as numbers but are stored in a DECIMAL column, which Sequelize
@@ -12,9 +13,14 @@ import { PRICE_SCALE, ProductType } from "./db/types.js";
 const toDecimalString = (price: number): string => price.toFixed(PRICE_SCALE);
 
 @Injectable()
-export class AppService {
-    async findAll(page: number, pageSize: number): Promise<ProductType[]> {
-        return await Product.findAll({
+export class ProductsService {
+    constructor(
+        @Inject(PRODUCTS_REPOSITORY)
+        private readonly products: ProductRepository,
+    ) {}
+
+    async findAll(page: number, pageSize: number): Promise<Product[]> {
+        return await this.products.findAll({
             order: [["id", "asc"]],
             limit: pageSize,
             offset: (page - 1) * pageSize,
@@ -24,7 +30,7 @@ export class AppService {
     async create(createProductBody: CreateProductDto): Promise<number> {
         const { price, ...rest } = createProductBody;
         try {
-            const newProduct = await Product.create({
+            const newProduct = await this.products.create({
                 ...rest,
                 price: toDecimalString(price),
             });
@@ -42,8 +48,8 @@ export class AppService {
         }
     }
 
-    async findOne(id: number): Promise<ProductType> {
-        const product = await Product.findByPk(id);
+    async findOne(id: number): Promise<Product> {
+        const product = await this.products.findByPk(id);
 
         if (product === null) {
             throw new HttpException("Product not found", 404);
@@ -63,7 +69,7 @@ export class AppService {
                 : { ...rest, price: toDecimalString(price) };
 
         const affectedRows = (
-            await Product.update(values, {
+            await this.products.update(values, {
                 where: {
                     id,
                 },
@@ -74,14 +80,14 @@ export class AppService {
         // that the row exists, but didn't change. Do a lookup after the fact
         // to differentiate, so most updates will involve only one query.
         if (affectedRows === 0) {
-            if ((await Product.findByPk(id)) === null) {
+            if ((await this.products.findByPk(id)) === null) {
                 throw new HttpException("Product not found", 404);
             }
         }
     }
 
     async delete(id: number): Promise<void> {
-        const affectedRows = await Product.destroy({
+        const affectedRows = await this.products.destroy({
             where: {
                 id,
             },

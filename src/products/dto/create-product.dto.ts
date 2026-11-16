@@ -7,8 +7,8 @@ import {
     Max,
     Min,
 } from "class-validator";
-import { PRICE_MAX, PRICE_SCALE, STOCK_MAX } from "../db/types.js";
-import { MaxCodePoints } from "./max-code-points.js";
+import { PRICE_MAX, PRICE_SCALE, STOCK_MAX } from "../product.model.js";
+import { MaxCodePoints } from "../../common/max-code-points.js";
 
 export class CreateProductDto {
     @IsString()

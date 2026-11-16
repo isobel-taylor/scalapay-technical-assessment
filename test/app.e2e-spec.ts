@@ -1,16 +1,22 @@
 import { Test, TestingModule } from "@nestjs/testing";
 import { INestApplication } from "@nestjs/common";
-import { Options } from "sequelize";
+import { Sequelize } from "sequelize";
 import request from "supertest";
 import { App } from "supertest/types.js";
 import { AppModule } from "./../src/app.module.js";
-import { Product, sequelize } from "./../src/db/index.js";
+import { SEQUELIZE } from "./../src/database/database.constants.js";
+import { createSequelize } from "./../src/database/database.providers.js";
+import { ProductRepository } from "./../src/products/product.model.js";
+import { PRODUCTS_REPOSITORY } from "./../src/products/products.constants.js";
 import { createValidationPipe } from "./../src/validation.js";
 
 // Runs against a real MySQL database (see vitest.config.e2e.ts and
 // test/global-setup.ts). Start it with `docker compose up -d` first.
 describe("Products API (e2e)", () => {
     let app: INestApplication<App>;
+    let sequelize: Sequelize;
+    /** The app's own Product model, for setting up and inspecting rows. */
+    let Product: ProductRepository;
 
     const api = () => request(app.getHttpServer());
 
@@ -45,17 +51,21 @@ describe("Products API (e2e)", () => {
     const notFound = { statusCode: 404, message: "Product not found" };
 
     beforeAll(async () => {
+        const moduleFixture: TestingModule = await Test.createTestingModule({
+            imports: [AppModule],
+        })
+            // The app's own connection settings, minus per-query SQL logging.
+            .overrideProvider(SEQUELIZE)
+            .useFactory({ factory: () => createSequelize({ logging: false }) })
+            .compile();
+
+        sequelize = moduleFixture.get<Sequelize>(SEQUELIZE);
+        Product = moduleFixture.get<ProductRepository>(PRODUCTS_REPOSITORY);
+
         if (!sequelize.getDatabaseName().endsWith("_test")) {
             throw new Error("e2e tests must run against a *_test database");
         }
-        // Silence per-query SQL logging. `options` exists at runtime but is
-        // missing from Sequelize's type definitions.
-        (sequelize as unknown as { options: Options }).options.logging = false;
         await sequelize.sync({ force: true });
-
-        const moduleFixture: TestingModule = await Test.createTestingModule({
-            imports: [AppModule],
-        }).compile();
 
         app = moduleFixture.createNestApplication();
         app.useGlobalPipes(createValidationPipe());
@@ -68,8 +78,9 @@ describe("Products API (e2e)", () => {
     });
 
     afterAll(async () => {
+        // Closing the app also closes the database connection, via
+        // DatabaseModule's shutdown hook.
         await app.close();
-        await sequelize.close();
     });
 
     describe("POST /products", () => {

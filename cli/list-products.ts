@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { ProductAttributes } from "../src/db/types.js";
+import type { ProductAttributes } from "../src/products/product.model.js";
 
 const PORT = process.env.PORT ?? 3000;
 

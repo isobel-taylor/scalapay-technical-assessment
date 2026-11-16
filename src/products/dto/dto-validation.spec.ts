@@ -1,13 +1,13 @@
 import { ArgumentMetadata, BadRequestException } from "@nestjs/common";
-import { createValidationPipe } from "../validation.js";
-import { CreateProductDto } from "./create-product-dto.js";
-import { DeleteProductDto } from "./delete-product-dto.js";
-import { FindAllProductDto } from "./find-all-product-dto.js";
-import { FindOneProductDto } from "./find-one-dto.js";
+import { createValidationPipe } from "../../validation.js";
+import { CreateProductDto } from "./create-product.dto.js";
+import { DeleteProductDto } from "./delete-product.dto.js";
+import { FindAllProductsDto } from "./find-all-products.dto.js";
+import { FindOneProductDto } from "./find-one-product.dto.js";
 import {
     UpdateProductBodyDto,
     UpdateProductParamDto,
-} from "./update-product-dto.js";
+} from "./update-product.dto.js";
 
 // Runs the DTOs through the same global ValidationPipe the app uses, so these
 // tests cover both the decorators and the pipe configuration (whitelisting,
@@ -318,9 +318,9 @@ describe("DTO validation", () => {
         });
     });
 
-    describe("FindAllProductDto", () => {
+    describe("FindAllProductsDto", () => {
         const query = (value: unknown) =>
-            validate(FindAllProductDto, "query", value);
+            validate(FindAllProductsDto, "query", value);
 
         it("accepts an empty query", async () => {
             await expect(query({})).resolves.toEqual({});
