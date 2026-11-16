@@ -6,6 +6,7 @@ import { App } from "supertest/types.js";
 import { AppModule } from "./../src/app.module.js";
 import { SEQUELIZE } from "./../src/database/database.constants.js";
 import { createSequelize } from "./../src/database/database.providers.js";
+import { createMigrator } from "./../src/database/migrator.js";
 import { ProductRepository } from "./../src/products/product.model.js";
 import { PRODUCTS_REPOSITORY } from "./../src/products/products.constants.js";
 import { createValidationPipe } from "./../src/validation.js";
@@ -65,7 +66,10 @@ describe("Products API (e2e)", () => {
         if (!sequelize.getDatabaseName().endsWith("_test")) {
             throw new Error("e2e tests must run against a *_test database");
         }
-        await sequelize.sync({ force: true });
+        // Build the schema with the real migrations, from an empty database,
+        // so the tests run against exactly what production would have.
+        await sequelize.getQueryInterface().dropAllTables();
+        await createMigrator(sequelize, undefined).up();
 
         app = moduleFixture.createNestApplication();
         app.useGlobalPipes(createValidationPipe());

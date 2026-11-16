@@ -35,3 +35,5 @@
 
 - Iterative refactor to create a product module and register Sequelize through
   dependency injection.
+
+- Used AI to help generate migrations.

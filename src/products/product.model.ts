@@ -66,6 +66,7 @@ export const defineProductModel = (sequelize: Sequelize): ProductRepository =>
             },
             stock: {
                 type: DataTypes.BIGINT,
+                allowNull: false,
                 defaultValue: 0,
                 validate: {
                     min: 0,

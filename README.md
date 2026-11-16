@@ -30,6 +30,12 @@ Stand up the MySQL container
 $ docker compose up -d
 ```
 
+Create the database schema by running the migrations
+
+```bash
+$ npm run migrate
+```
+
 Run the server
 
 ```bash
@@ -42,6 +48,32 @@ $ npm run start:dev
 # production mode
 $ npm run start:prod
 ```
+
+## Migrations
+
+The schema is managed with [Umzug](https://github.com/sequelize/umzug)
+migrations in `src/database/migrations`, which record what they have applied
+in the `SequelizeMeta` table. They connect using the same `.env` settings as
+the server.
+
+```bash
+# apply all pending migrations
+$ npm run migrate
+
+# revert the most recent migration
+$ npm run migrate:down
+
+# list migrations that have not been applied yet
+$ npm run migrate:pending
+
+# apply migrations from the compiled build (after `npm run build`)
+$ npm run migrate:prod
+```
+
+To add a migration, create a file in `src/database/migrations` exporting `up`
+and `down` functions, and add it to the end of the list in
+`src/database/migrator.ts`. Migrations are a record of history: once one has
+been applied anywhere, add a new migration rather than editing it.
 
 ## Interacting with the API
 
