@@ -52,7 +52,7 @@ export const Product = sequelize.define<
     },
 );
 
-// Force reset the DB on start. Highly discouraged in production.
-(async () => {
-    await sequelize.sync({ force: true });
-})();
+// // Force reset the DB on start. Highly discouraged in production.
+// (async () => {
+//     await sequelize.sync({ force: true });
+// })();

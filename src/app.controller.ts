@@ -6,19 +6,24 @@ import {
     HttpException,
     Param,
     Post,
+    Query,
 } from "@nestjs/common";
 import { AppService } from "./app.service.js";
 import { CreateProductDto } from "./dto/create-product-dto.js";
 import { UpdateProductDto } from "./dto/update-product-dto.js";
 import { ProductType } from "./db/types.js";
+import { FindAllProductDto } from "./dto/find-all-product-dto.js";
 
 @Controller("products")
 export class AppController {
     constructor(private readonly appService: AppService) {}
 
     @Get()
-    async findAll(): Promise<ProductType[]> {
-        return await this.appService.findAll();
+    async findAll(@Query() query: FindAllProductDto): Promise<ProductType[]> {
+        return await this.appService.findAll(
+            query.page ?? 1,
+            query.pageSize ?? 25,
+        );
     }
 
     @Post()
