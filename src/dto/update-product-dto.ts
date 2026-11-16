@@ -1,3 +1,4 @@
+import { Type } from "class-transformer";
 import {
     IsInt,
     IsNotEmpty,
@@ -7,7 +8,7 @@ import {
     Min,
 } from "class-validator";
 
-export class UpdateProductDto {
+export class UpdateProductBodyDto {
     @IsOptional()
     @IsString()
     @IsNotEmpty()
@@ -22,4 +23,11 @@ export class UpdateProductDto {
     @IsInt()
     @Min(0)
     stock?: number;
+}
+
+export class UpdateProductParamDto {
+    @Type(() => Number)
+    @IsInt()
+    @Min(1)
+    id: number;
 }

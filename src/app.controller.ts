@@ -10,9 +10,14 @@ import {
 } from "@nestjs/common";
 import { AppService } from "./app.service.js";
 import { CreateProductDto } from "./dto/create-product-dto.js";
-import { UpdateProductDto } from "./dto/update-product-dto.js";
+import {
+    UpdateProductBodyDto,
+    UpdateProductParamDto,
+} from "./dto/update-product-dto.js";
 import { ProductType } from "./db/types.js";
 import { FindAllProductDto } from "./dto/find-all-product-dto.js";
+import { FindOneProductDto } from "./dto/find-one-dto.js";
+import { DeleteProductDto } from "./dto/delete-product-dto.js";
 
 @Controller("products")
 export class AppController {
@@ -32,8 +37,8 @@ export class AppController {
     }
 
     @Get(":id")
-    async findOne(@Param("id") id: number): Promise<ProductType> {
-        const product = await this.appService.findOne(id);
+    async findOne(@Param() param: FindOneProductDto): Promise<ProductType> {
+        const product = await this.appService.findOne(param.id);
 
         if (product === null) {
             throw new HttpException("Product not found", 404);
@@ -44,14 +49,14 @@ export class AppController {
 
     @Post(":id")
     async update(
-        @Param("id") id: number,
-        @Body() updateProductBody: UpdateProductDto,
+        @Param() param: UpdateProductParamDto,
+        @Body() updateProductBody: UpdateProductBodyDto,
     ): Promise<void> {
-        await this.appService.update(id, updateProductBody);
+        await this.appService.update(param.id, updateProductBody);
     }
 
     @Delete(":id")
-    async delete(@Param("id") id: number): Promise<void> {
-        await this.appService.delete(id);
+    async delete(@Param() param: DeleteProductDto): Promise<void> {
+        await this.appService.delete(param.id);
     }
 }

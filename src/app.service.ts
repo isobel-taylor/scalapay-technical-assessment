@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { CreateProductDto } from "./dto/create-product-dto.js";
-import { UpdateProductDto } from "./dto/update-product-dto.js";
+import { UpdateProductBodyDto } from "./dto/update-product-dto.js";
 import { Product } from "./db/index.js";
 import { ProductType } from "./db/types.js";
 
@@ -25,7 +25,7 @@ export class AppService {
 
     async update(
         id: number,
-        updateProductBody: UpdateProductDto,
+        updateProductBody: UpdateProductBodyDto,
     ): Promise<void> {
         await Product.update(updateProductBody, {
             where: {
