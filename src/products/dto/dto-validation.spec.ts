@@ -350,5 +350,24 @@ describe("DTO validation", () => {
 
             expect(Object.keys(errors)).toEqual([field]);
         });
+
+        it.each(["1", "9007199254740991"])("accepts page %s", async (page) => {
+            await expect(query({ page })).resolves.toEqual({
+                page: Number(page),
+            });
+        });
+
+        // Query strings like "1e20" convert to integers, so the maximum is
+        // what stops them, not the integer check.
+        it.each(["9007199254740992", "1e20", "99999999999999999999"])(
+            "rejects page %s above the maximum",
+            async (page) => {
+                const errors = await validationErrors(query({ page }));
+
+                expect(errors).toEqual({
+                    page: ["page must not be greater than 9007199254740991"],
+                });
+            },
+        );
     });
 });

@@ -234,6 +234,17 @@ describe("ProductsService", () => {
             products.findByPk.mockResolvedValue(null);
 
             await expectNotFound(service.update(99, { stock: 7 }));
+            expect(products.findByPk).toHaveBeenCalledWith(99);
+        });
+
+        // The 404 is decided by the read-back, not the affected row count, so
+        // a product deleted between the update and the read is still a 404
+        // rather than a successful response with no product.
+        it("throws a 404 when a row changed but the product is gone by the read-back", async () => {
+            products.update.mockResolvedValue([1]);
+            products.findByPk.mockResolvedValue(null);
+
+            await expectNotFound(service.update(1, { stock: 7 }));
         });
     });
 

@@ -339,6 +339,30 @@ describe("Products API (e2e)", () => {
 
                 expect(Object.keys(response.body.message)).toEqual([field]);
             });
+
+            // The largest page with the largest page size gives the largest
+            // offset the API can send to MySQL; it must still be a valid query.
+            it("accepts the maximum page with the maximum page size", async () => {
+                await api()
+                    .get("/products?page=9007199254740991&pageSize=100")
+                    .expect(200)
+                    .expect({ products: [], total: 30 });
+            });
+
+            it.each(["9007199254740992", "1e20", "99999999999999999999"])(
+                "rejects ?page=%s above the maximum with a 400",
+                async (page) => {
+                    const response = await api()
+                        .get(`/products?page=${page}`)
+                        .expect(400);
+
+                    expect(response.body.message).toEqual({
+                        page: [
+                            "page must not be greater than 9007199254740991",
+                        ],
+                    });
+                },
+            );
         });
     });
 
@@ -489,6 +513,18 @@ describe("Products API (e2e)", () => {
                 .send({})
                 .expect(404)
                 .expect(notFound);
+        });
+
+        it("returns 404 for a product that has been deleted, without recreating it", async () => {
+            const { id } = await createProduct();
+            await api().delete(`/products/${id}`).expect(200);
+
+            await api()
+                .patch(`/products/${id}`)
+                .send({ stock: 7 })
+                .expect(404)
+                .expect(notFound);
+            expect(await Product.count()).toBe(0);
         });
 
         it("rejects an invalid body without changing the product", async () => {
