@@ -41,17 +41,23 @@ describe("ProductsController", () => {
     });
 
     describe("findAll", () => {
-        it("defaults to page 1 with a page size of 25", async () => {
-            productsService.findAll.mockResolvedValue([product]);
+        const emptyPage = { products: [], total: 0 };
 
-            await expect(productsController.findAll({})).resolves.toEqual([
-                product,
-            ]);
+        it("defaults to page 1 with a page size of 25", async () => {
+            productsService.findAll.mockResolvedValue({
+                products: [product],
+                total: 1,
+            });
+
+            await expect(productsController.findAll({})).resolves.toEqual({
+                products: [product],
+                total: 1,
+            });
             expect(productsService.findAll).toHaveBeenCalledWith(1, 25);
         });
 
         it("passes through an explicit page and page size", async () => {
-            productsService.findAll.mockResolvedValue([]);
+            productsService.findAll.mockResolvedValue(emptyPage);
 
             await productsController.findAll({ page: 3, pageSize: 10 });
 
@@ -59,7 +65,7 @@ describe("ProductsController", () => {
         });
 
         it("defaults only the parameter that is missing", async () => {
-            productsService.findAll.mockResolvedValue([]);
+            productsService.findAll.mockResolvedValue(emptyPage);
 
             await productsController.findAll({ page: 2 });
             expect(productsService.findAll).toHaveBeenLastCalledWith(2, 25);

@@ -10,7 +10,7 @@ import { ProductsService } from "./products.service.js";
 describe("ProductsService", () => {
     let service: ProductsService;
     let products: {
-        findAll: ReturnType<typeof vi.fn>;
+        findAndCountAll: ReturnType<typeof vi.fn>;
         create: ReturnType<typeof vi.fn>;
         findByPk: ReturnType<typeof vi.fn>;
         update: ReturnType<typeof vi.fn>;
@@ -19,7 +19,7 @@ describe("ProductsService", () => {
 
     beforeEach(async () => {
         products = {
-            findAll: vi.fn(),
+            findAndCountAll: vi.fn(),
             create: vi.fn(),
             findByPk: vi.fn(),
             update: vi.fn(),
@@ -44,11 +44,23 @@ describe("ProductsService", () => {
     };
 
     describe("findAll", () => {
-        it("returns the products from the model", async () => {
+        it("returns the page of products and the total count", async () => {
             const rows = [{ id: 1 }, { id: 2 }];
-            products.findAll.mockResolvedValue(rows);
+            products.findAndCountAll.mockResolvedValue({ rows, count: 30 });
 
-            await expect(service.findAll(1, 25)).resolves.toBe(rows);
+            await expect(service.findAll(1, 25)).resolves.toEqual({
+                products: rows,
+                total: 30,
+            });
+        });
+
+        it("returns the total even when the page is past the end", async () => {
+            products.findAndCountAll.mockResolvedValue({ rows: [], count: 3 });
+
+            await expect(service.findAll(5, 25)).resolves.toEqual({
+                products: [],
+                total: 3,
+            });
         });
 
         it.each([
@@ -59,11 +71,14 @@ describe("ProductsService", () => {
         ])(
             "orders by id and requests page $page of size $pageSize from offset $offset",
             async ({ page, pageSize, offset }) => {
-                products.findAll.mockResolvedValue([]);
+                products.findAndCountAll.mockResolvedValue({
+                    rows: [],
+                    count: 0,
+                });
 
                 await service.findAll(page, pageSize);
 
-                expect(products.findAll).toHaveBeenCalledWith({
+                expect(products.findAndCountAll).toHaveBeenCalledWith({
                     order: [["id", "asc"]],
                     limit: pageSize,
                     offset,

@@ -23,7 +23,9 @@ export class ProductsController {
     constructor(private readonly productsService: ProductsService) {}
 
     @Get()
-    async findAll(@Query() query: FindAllProductsDto): Promise<Product[]> {
+    async findAll(
+        @Query() query: FindAllProductsDto,
+    ): Promise<{ products: Product[]; total: number }> {
         return await this.productsService.findAll(
             query.page ?? 1,
             query.pageSize ?? 25,

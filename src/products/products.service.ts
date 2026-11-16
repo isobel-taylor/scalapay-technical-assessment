@@ -19,12 +19,20 @@ export class ProductsService {
         private readonly products: ProductRepository,
     ) {}
 
-    async findAll(page: number, pageSize: number): Promise<Product[]> {
-        return await this.products.findAll({
+    async findAll(
+        page: number,
+        pageSize: number,
+    ): Promise<{ products: Product[]; total: number }> {
+        const { rows, count } = await this.products.findAndCountAll({
             order: [["id", "asc"]],
             limit: pageSize,
             offset: (page - 1) * pageSize,
         });
+
+        return {
+            products: rows,
+            total: count,
+        };
     }
 
     async create(createProductBody: CreateProductDto): Promise<number> {

@@ -220,26 +220,37 @@ describe("Products API (e2e)", () => {
     });
 
     describe("GET /products", () => {
-        it("returns an empty list when there are no products", async () => {
-            await api().get("/products").expect(200).expect([]);
+        it("returns an empty list and a total of 0 when there are no products", async () => {
+            await api()
+                .get("/products")
+                .expect(200)
+                .expect({ products: [], total: 0 });
         });
 
         it("returns all product fields", async () => {
-            await createProduct({ name: "Widget", price: 9.99, stock: 3 });
+            await createProduct({
+                productToken: "widget-001",
+                name: "Widget",
+                price: 9.99,
+                stock: 3,
+            });
 
             const response = await api().get("/products").expect(200);
 
-            expect(response.body).toEqual([
-                {
-                    id: 1,
-                    productToken: expect.any(String),
-                    name: "Widget",
-                    price: "9.99",
-                    stock: 3,
-                    createdAt: expect.any(String),
-                    updatedAt: expect.any(String),
-                },
-            ]);
+            expect(response.body).toEqual({
+                products: [
+                    {
+                        id: 1,
+                        productToken: "widget-001",
+                        name: "Widget",
+                        price: "9.99",
+                        stock: 3,
+                        createdAt: expect.any(String),
+                        updatedAt: expect.any(String),
+                    },
+                ],
+                total: 1,
+            });
         });
 
         it("returns products ordered by id", async () => {
@@ -249,13 +260,30 @@ describe("Products API (e2e)", () => {
 
             const response = await api().get("/products").expect(200);
 
-            expect(response.body.map((p: { id: number }) => p.id)).toEqual([
-                1, 2, 3,
-            ]);
+            expect(
+                response.body.products.map((p: { id: number }) => p.id),
+            ).toEqual([1, 2, 3]);
+        });
+
+        it("reflects created and deleted products in the total", async () => {
+            const { id } = await createProduct();
+            await createProduct();
+            await api().delete(`/products/${id}`).expect(200);
+
+            const response = await api().get("/products").expect(200);
+
+            expect(response.body.total).toBe(1);
         });
 
         describe("pagination", () => {
-            const ids = (body: { id: number }[]) => body.map((p) => p.id);
+            /** The ids on the page, after checking the total covers all 30. */
+            const ids = (body: {
+                products: { id: number }[];
+                total: number;
+            }) => {
+                expect(body.total).toBe(30);
+                return body.products.map((p) => p.id);
+            };
 
             beforeEach(async () => {
                 await Product.bulkCreate(
@@ -291,8 +319,11 @@ describe("Products API (e2e)", () => {
                 expect(ids(response.body)).toEqual([9, 10, 11, 12]);
             });
 
-            it("returns an empty list for a page past the end", async () => {
-                await api().get("/products?page=100").expect(200).expect([]);
+            it("returns an empty list, but the full total, for a page past the end", async () => {
+                await api()
+                    .get("/products?page=100")
+                    .expect(200)
+                    .expect({ products: [], total: 30 });
             });
 
             it.each([
