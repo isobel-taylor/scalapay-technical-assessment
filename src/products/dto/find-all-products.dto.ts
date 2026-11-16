@@ -6,6 +6,7 @@ export class FindAllProductsDto {
     @Type(() => Number)
     @IsInt()
     @Min(1)
+    @Max(Number.MAX_SAFE_INTEGER)
     page?: number;
 
     @IsOptional()
