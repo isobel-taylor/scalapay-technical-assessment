@@ -68,7 +68,12 @@ describe("AppController", () => {
     describe("create", () => {
         it("creates the product and returns its new id", async () => {
             appService.create.mockResolvedValue(42);
-            const body = { name: "Widget", price: 9.99, stock: 3 };
+            const body = {
+                productToken: "widget-001",
+                name: "Widget",
+                price: 9.99,
+                stock: 3,
+            };
 
             await expect(appController.create(body)).resolves.toStrictEqual({
                 id: 42,

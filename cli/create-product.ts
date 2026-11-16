@@ -5,6 +5,7 @@ import { hideBin } from "yargs/helpers";
 const PORT = process.env.PORT ?? 3000;
 
 interface CreateProductBody {
+    productToken: string;
     name: string;
     price: number;
     stock?: number;
@@ -30,7 +31,14 @@ const createProduct = async (
 
 const run = async () => {
     const argv = await yargs(hideBin(process.argv))
-        .usage("Usage: $0 --name <name> --price <price> [--stock <stock>]")
+        .usage(
+            "Usage: $0 --token <productToken> --name <name> --price <price> [--stock <stock>]",
+        )
+        .option("token", {
+            type: "string",
+            demandOption: true,
+            describe: "Unique product token",
+        })
         .option("name", {
             type: "string",
             demandOption: true,
@@ -49,6 +57,7 @@ const run = async () => {
         .parse();
 
     const result = await createProduct({
+        productToken: argv.token,
         name: argv.name,
         price: argv.price,
         stock: argv.stock,

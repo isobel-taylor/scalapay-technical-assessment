@@ -14,6 +14,11 @@ export class CreateProductDto {
     @IsString()
     @IsNotEmpty()
     @MaxCodePoints(255)
+    productToken: string;
+
+    @IsString()
+    @IsNotEmpty()
+    @MaxCodePoints(255)
     name: string;
 
     @IsNumber({ maxDecimalPlaces: PRICE_SCALE })

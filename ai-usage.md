@@ -29,3 +29,6 @@
 
 - I wrote the first usage script, list-products, and tasked AI with writing the
   remaining sample scripts.
+
+- AI noted a spec gap: the productToken is to be supplied, but my implementation
+  had it generated as a UUIDv4 on product creation.

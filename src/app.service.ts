@@ -1,4 +1,5 @@
 import { HttpException, Injectable } from "@nestjs/common";
+import { UniqueConstraintError } from "sequelize";
 import { CreateProductDto } from "./dto/create-product-dto.js";
 import { UpdateProductBodyDto } from "./dto/update-product-dto.js";
 import { Product } from "./db/index.js";
@@ -22,11 +23,23 @@ export class AppService {
 
     async create(createProductBody: CreateProductDto): Promise<number> {
         const { price, ...rest } = createProductBody;
-        const newProduct = await Product.create({
-            ...rest,
-            price: toDecimalString(price),
-        });
-        return newProduct.dataValues.id;
+        try {
+            const newProduct = await Product.create({
+                ...rest,
+                price: toDecimalString(price),
+            });
+            return newProduct.dataValues.id;
+        } catch (error) {
+            // productToken is the only unique column a client supplies, so a
+            // unique violation means the token is already in use.
+            if (error instanceof UniqueConstraintError) {
+                throw new HttpException(
+                    "A product with this productToken already exists",
+                    409,
+                );
+            }
+            throw error;
+        }
     }
 
     async findOne(id: number): Promise<ProductType> {

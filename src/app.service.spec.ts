@@ -1,4 +1,5 @@
 import { HttpException } from "@nestjs/common";
+import { UniqueConstraintError } from "sequelize";
 import { AppService } from "./app.service.js";
 import { Product } from "./db/index.js";
 
@@ -61,13 +62,44 @@ describe("AppService", () => {
                 .mockResolvedValue({ dataValues: { id: 7 } } as never);
 
             await expect(
-                service.create({ name: "Widget", price: 9.99, stock: 3 }),
+                service.create({
+                    productToken: "widget-001",
+                    name: "Widget",
+                    price: 9.99,
+                    stock: 3,
+                }),
             ).resolves.toBe(7);
             expect(create).toHaveBeenCalledWith({
+                productToken: "widget-001",
                 name: "Widget",
                 price: "9.99",
                 stock: 3,
             });
+        });
+
+        it("throws a 409 when the product token is already in use", async () => {
+            vi.spyOn(Product, "create").mockRejectedValue(
+                new UniqueConstraintError({}),
+            );
+
+            const error: unknown = await service
+                .create({ productToken: "taken", name: "Widget", price: 1 })
+                .catch((e: unknown) => e);
+
+            expect(error).toBeInstanceOf(HttpException);
+            expect((error as HttpException).getStatus()).toBe(409);
+            expect((error as HttpException).message).toBe(
+                "A product with this productToken already exists",
+            );
+        });
+
+        it("rethrows other database errors unchanged", async () => {
+            const failure = new Error("connection lost");
+            vi.spyOn(Product, "create").mockRejectedValue(failure);
+
+            await expect(
+                service.create({ productToken: "t", name: "Widget", price: 1 }),
+            ).rejects.toBe(failure);
         });
 
         it.each([
@@ -82,9 +114,14 @@ describe("AppService", () => {
                     .spyOn(Product, "create")
                     .mockResolvedValue({ dataValues: { id: 1 } } as never);
 
-                await service.create({ name: "Widget", price });
+                await service.create({
+                    productToken: "widget-001",
+                    name: "Widget",
+                    price,
+                });
 
                 expect(create).toHaveBeenCalledWith({
+                    productToken: "widget-001",
                     name: "Widget",
                     price: stored,
                 });

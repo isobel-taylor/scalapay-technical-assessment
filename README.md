@@ -51,8 +51,8 @@ Several helper scripts are available for using each endpoint:
 # List all products
 $ npm run list-products
 
-# Create a product (stock is optional and defaults to 0)
-$ npm run create-product -- --name "Mug" --price 12.99 --stock 9
+# Create a product (token must be unique; stock is optional and defaults to 0)
+$ npm run create-product -- --token "mug-001" --name "Mug" --price 12.99 --stock 9
 
 # Get a product (id is required)
 $ npm run get-product -- --id 1
@@ -61,7 +61,7 @@ $ npm run get-product -- --id 1
 $ npm run update-product -- --id 1 --name "Kettle" --price 42.99 --stock 12
 
 # Delete a product (id is required)
-$ npm run delete-product -- id 1
+$ npm run delete-product -- --id 1
 ```
 
 ## Run tests

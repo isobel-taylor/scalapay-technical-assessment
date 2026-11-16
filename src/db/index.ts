@@ -26,9 +26,12 @@ export const Product = sequelize.define<
             autoIncrement: true,
         },
         productToken: {
-            type: DataTypes.UUID,
+            type: DataTypes.STRING,
+            allowNull: false,
             unique: true,
-            defaultValue: DataTypes.UUIDV4,
+            validate: {
+                notEmpty: true,
+            },
         },
         name: {
             type: DataTypes.STRING,

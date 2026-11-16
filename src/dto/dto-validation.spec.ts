@@ -38,18 +38,24 @@ describe("DTO validation", () => {
         const create = (body: unknown) =>
             validate(CreateProductDto, "body", body);
 
+        const productToken = "widget-001";
+
         it.each([
-            { name: "Widget", price: 9.99, stock: 3 },
-            { name: "Widget", price: 0, stock: 0 },
-            { name: "Widget", price: 10 },
+            { productToken, name: "Widget", price: 9.99, stock: 3 },
+            { productToken, name: "Widget", price: 0, stock: 0 },
+            { productToken, name: "Widget", price: 10 },
         ])("accepts a valid body %o", async (body) => {
             await expect(create(body)).resolves.toEqual(body);
         });
 
-        it("requires name and price", async () => {
+        it("requires productToken, name and price", async () => {
             const errors = await validationErrors(create({}));
 
-            expect(Object.keys(errors).sort()).toEqual(["name", "price"]);
+            expect(Object.keys(errors).sort()).toEqual([
+                "name",
+                "price",
+                "productToken",
+            ]);
         });
 
         it.each([
@@ -72,29 +78,70 @@ describe("DTO validation", () => {
                 { name: "Widget", price: 1, stock: "3" },
                 "stock",
             ],
+            [
+                "an empty productToken",
+                { productToken: "", name: "Widget", price: 1 },
+                "productToken",
+            ],
+            [
+                "a non-string productToken",
+                { productToken: 123, name: "Widget", price: 1 },
+                "productToken",
+            ],
         ])("rejects %s", async (_, body, field) => {
-            const errors = await validationErrors(create(body));
+            const errors = await validationErrors(
+                create({ productToken, ...body }),
+            );
 
             expect(Object.keys(errors)).toEqual([field]);
             expect(errors[field].length).toBeGreaterThan(0);
         });
 
-        it.each(["productToken", "id"])(
-            "rejects the server-generated %s property",
-            async (property) => {
-                const errors = await validationErrors(
-                    create({ name: "Widget", price: 1, [property]: "x" }),
-                );
+        it("accepts a 255 code point productToken", async () => {
+            const body = {
+                productToken: "😀".repeat(255),
+                name: "Widget",
+                price: 1,
+            };
 
-                expect(errors).toEqual({
-                    [property]: [`property ${property} should not exist`],
-                });
-            },
-        );
+            await expect(create(body)).resolves.toEqual(body);
+        });
+
+        it("rejects a productToken over 255 code points", async () => {
+            const errors = await validationErrors(
+                create({
+                    productToken: "❤️".repeat(128),
+                    name: "Widget",
+                    price: 1,
+                }),
+            );
+
+            expect(errors).toEqual({
+                productToken: [
+                    "productToken must be shorter than or equal to 255 characters",
+                ],
+            });
+        });
+
+        it("rejects the server-generated id property", async () => {
+            const errors = await validationErrors(
+                create({ productToken, name: "Widget", price: 1, id: 1 }),
+            );
+
+            expect(errors).toEqual({
+                id: ["property id should not exist"],
+            });
+        });
 
         it("groups multiple errors by property", async () => {
             const errors = await validationErrors(
-                create({ name: "", price: -1, stock: 1.5, extra: true }),
+                create({
+                    productToken,
+                    name: "",
+                    price: -1,
+                    stock: 1.5,
+                    extra: true,
+                }),
             );
 
             expect(errors).toEqual({
@@ -137,7 +184,11 @@ describe("DTO validation", () => {
     // Limits that mirror the database columns: name is VARCHAR(255) and price
     // is DECIMAL(10, 2). Both create and update must enforce them.
     describe.each([
-        ["CreateProductDto", CreateProductDto, { name: "Widget", price: 1 }],
+        [
+            "CreateProductDto",
+            CreateProductDto,
+            { productToken: "widget-001", name: "Widget", price: 1 },
+        ],
         ["UpdateProductBodyDto", UpdateProductBodyDto, {}],
     ])("%s column limits", (_, dto, base) => {
         const body = (fields: object) =>

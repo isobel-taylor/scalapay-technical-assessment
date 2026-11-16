@@ -22,7 +22,7 @@ export interface ProductAttributes {
 
 export type ProductCreationAttributes = Pick<
     ProductAttributes,
-    "name" | "price"
+    "productToken" | "name" | "price"
 > &
     Partial<Pick<ProductAttributes, "stock">>;
 

@@ -14,9 +14,21 @@ describe("Products API (e2e)", () => {
 
     const api = () => request(app.getHttpServer());
 
-    /** Creates a product through the API and returns its id. */
+    let tokenCounter = 0;
+    /** Returns a product token not used by any other product in the run. */
+    const nextToken = () => `token-${++tokenCounter}`;
+
+    /**
+     * Creates a product through the API and returns its id. A unique product
+     * token is generated when the body does not supply one.
+     */
     const createProduct = async (
-        body: { name: string; price: number; stock?: number } = {
+        body: {
+            productToken?: string;
+            name: string;
+            price: number;
+            stock?: number;
+        } = {
             name: "Widget",
             price: 9.99,
             stock: 3,
@@ -24,7 +36,7 @@ describe("Products API (e2e)", () => {
     ): Promise<{ id: number }> => {
         const response = await api()
             .post("/products")
-            .send(body)
+            .send({ productToken: nextToken(), ...body })
             .expect(201)
             .expect("Content-Type", /application\/json/);
         return response.body as { id: number };
@@ -64,7 +76,12 @@ describe("Products API (e2e)", () => {
         it("creates a product and returns its id", async () => {
             const response = await api()
                 .post("/products")
-                .send({ name: "Widget", price: 9.99, stock: 3 })
+                .send({
+                    productToken: "widget-001",
+                    name: "Widget",
+                    price: 9.99,
+                    stock: 3,
+                })
                 .expect(201)
                 .expect("Content-Type", /application\/json/);
 
@@ -73,35 +90,94 @@ describe("Products API (e2e)", () => {
             const stored = await Product.findByPk(1);
             expect(stored?.get()).toMatchObject({
                 id: 1,
+                productToken: "widget-001",
                 name: "Widget",
                 price: "9.99",
                 stock: 3,
             });
         });
 
-        it("defaults stock to 0 and generates a UUID product token", async () => {
+        it("defaults stock to 0", async () => {
             const id = (await createProduct({ name: "Gadget", price: 10 })).id;
 
             const response = await api().get(`/products/${id}`).expect(200);
             expect(response.body).toMatchObject({ stock: 0 });
-            expect(response.body.productToken).toMatch(
-                /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
-            );
         });
 
-        it("generates a distinct product token for each product", async () => {
-            await createProduct();
-            await createProduct();
+        it("returns 409 for a product token that is already in use", async () => {
+            await createProduct({
+                productToken: "widget-001",
+                name: "Widget",
+                price: 1,
+            });
 
-            const response = await api().get("/products").expect(200);
-            const [first, second] = response.body as { productToken: string }[];
-            expect(first.productToken).not.toBe(second.productToken);
+            await api()
+                .post("/products")
+                .send({ productToken: "widget-001", name: "Other", price: 2 })
+                .expect(409)
+                .expect({
+                    statusCode: 409,
+                    message: "A product with this productToken already exists",
+                });
+            expect(await Product.count()).toBe(1);
+        });
+
+        it("allows a product token to be reused once its product is deleted", async () => {
+            const { id } = await createProduct({
+                productToken: "widget-001",
+                name: "Widget",
+                price: 1,
+            });
+            await api().delete(`/products/${id}`).expect(200);
+
+            await createProduct({
+                productToken: "widget-001",
+                name: "Widget",
+                price: 1,
+            });
+        });
+
+        it("stores a 255 code point product token", async () => {
+            const productToken = "😀".repeat(255);
+
+            const { id } = await createProduct({
+                productToken,
+                name: "Widget",
+                price: 1,
+            });
+
+            const response = await api().get(`/products/${id}`).expect(200);
+            expect(response.body.productToken).toBe(productToken);
+        });
+
+        it("rejects a product token over 255 code points", async () => {
+            const response = await api()
+                .post("/products")
+                .send({
+                    productToken: "a".repeat(256),
+                    name: "Widget",
+                    price: 1,
+                })
+                .expect(400);
+
+            expect(response.body.message).toEqual({
+                productToken: [
+                    "productToken must be shorter than or equal to 255 characters",
+                ],
+            });
+            expect(await Product.count()).toBe(0);
         });
 
         it("returns grouped validation errors for an invalid body", async () => {
             const response = await api()
                 .post("/products")
-                .send({ name: "", price: -1, stock: 1.5, extra: true })
+                .send({
+                    productToken: nextToken(),
+                    name: "",
+                    price: -1,
+                    stock: 1.5,
+                    extra: true,
+                })
                 .expect(400);
 
             expect(response.body).toEqual({
@@ -117,23 +193,13 @@ describe("Products API (e2e)", () => {
             expect(await Product.count()).toBe(0);
         });
 
-        it("rejects a client-supplied product token", async () => {
-            const response = await api()
-                .post("/products")
-                .send({ name: "Widget", price: 1, productToken: "abc" })
-                .expect(400);
-
-            expect(response.body.message).toEqual({
-                productToken: ["property productToken should not exist"],
-            });
-        });
-
         it("rejects a body missing required fields", async () => {
             const response = await api().post("/products").send({}).expect(400);
 
             expect(Object.keys(response.body.message).sort()).toEqual([
                 "name",
                 "price",
+                "productToken",
             ]);
         });
     });
@@ -179,6 +245,7 @@ describe("Products API (e2e)", () => {
             beforeEach(async () => {
                 await Product.bulkCreate(
                     Array.from({ length: 30 }, (_, i) => ({
+                        productToken: nextToken(),
                         name: `Product ${i + 1}`,
                         price: `${i + 1}.00`,
                     })),
@@ -411,7 +478,12 @@ describe("Products API (e2e)", () => {
                 if (existing === undefined) {
                     return api()
                         .post("/products")
-                        .send({ name: "Widget", price: 1, ...body });
+                        .send({
+                            productToken: nextToken(),
+                            name: "Widget",
+                            price: 1,
+                            ...body,
+                        });
                 }
                 const { id } = await createProduct(existing);
                 return api().post(`/products/${id}`).send(body);
@@ -514,7 +586,11 @@ describe("Products API (e2e)", () => {
         it("does not store a product rejected for its limits", async () => {
             await api()
                 .post("/products")
-                .send({ name: tooLongName, price: 100_000_000 })
+                .send({
+                    productToken: nextToken(),
+                    name: tooLongName,
+                    price: 100_000_000,
+                })
                 .expect(400);
 
             expect(await Product.count()).toBe(0);
@@ -523,7 +599,11 @@ describe("Products API (e2e)", () => {
         it("does not store a name that only fits when variation selectors are ignored", async () => {
             await api()
                 .post("/products")
-                .send({ name: "❤️".repeat(255), price: 1 })
+                .send({
+                    productToken: nextToken(),
+                    name: "❤️".repeat(255),
+                    price: 1,
+                })
                 .expect(400);
 
             expect(await Product.count()).toBe(0);
